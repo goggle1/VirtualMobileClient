@@ -4,8 +4,21 @@ import urllib
 import json
 import base64
 import re
+import db
 
+g_msmaster_db   = None
 g_video_list    = []
+
+class video_t():
+    def __init__(self, hash_id, block_type, block_title, media_id, media_title, serial_id, language):
+        self.m_hash_id      = hash_id
+        self.m_block_type   = block_type
+        self.m_block_title  = block_title
+        self.m_media_id     = media_id
+        self.m_media_title  = media_title
+        self.m_serial_id    = serial_id
+        self.m_language     = language
+        
 
 def hill2_decrypt(decypt_key, plain_text):
     plain_len = len(plain_text)
@@ -83,17 +96,6 @@ def client_get_url(url):
 
     return data4
 
-
-class video_t():
-    def __init__(self, hash_id, block_type, block_title, media_id, media_title, serial_id, language):
-        self.m_hash_id      = hash_id
-        self.m_block_type   = block_type
-        self.m_block_title  = block_title
-        self.m_media_id     = media_id
-        self.m_media_title  = media_title
-        self.m_serial_id    = serial_id
-        self.m_language     = language
-
         
 def client_show_hash(url, block_type, block_title, media_id, media_title, serial_id, language):
     if(len(url) == 0):
@@ -112,9 +114,33 @@ def client_show_hash(url, block_type, block_title, media_id, media_title, serial
     if(match):
         group = match.group()
         print group
-    '''
+    '''    
+    
+    sql = 'select hash, temperature0, online_time, PayOrFree from mobile_task_temperature where hash="%s"' % (only_hash)
+    #print sql
+    global g_msmaster_db
+    g_msmaster_db.execute(sql)
+    task1 = {}
+    query_set_1 = g_msmaster_db.cur.fetchall()
+    for row1 in query_set_1:         
+        r1_index = 0
+        for r1 in row1:
+            if(r1_index == 0):
+                task1['hash'] = r1
+            elif(r1_index == 1):
+                task1['temperature0'] = r1
+            elif(r1_index == 2):
+                task1['online_time'] = r1
+            elif(r1_index == 3):
+                task1['PayOrFree'] = r1
+            r1_index += 1
+    
     one_video = video_t(only_hash, block_type, block_title, media_id, media_title, serial_id, language)
-    print '%s\t%s\t%s\t%s\t%s\t%s\t%s' % (only_hash, block_type, block_title, media_id, str(serial_id), str(language), media_title)    
+    if 'hash' not in task1:
+        print '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s' % (only_hash, block_type, block_title, media_id, str(serial_id), str(language), media_title, 'NotFound')
+    else:
+        print '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%e\t%s\t%s' % (only_hash, block_type, block_title, media_id, str(serial_id), str(language), media_title, \
+                                                         task1['temperature0'], str(task1['online_time']), str(task1['PayOrFree']))
     
     g_video_list.append(one_video)
     
@@ -212,6 +238,10 @@ def client_show_index(content):
 
         
 def main():
+    global g_msmaster_db
+    g_msmaster_db = db.DB_MYSQL()
+    g_msmaster_db.connect(db.DB_CONFIG_MSMASTER.host, db.DB_CONFIG_MSMASTER.port, db.DB_CONFIG_MSMASTER.user, db.DB_CONFIG_MSMASTER.password, db.DB_CONFIG_MSMASTER.db)
+    
     #url = "http://jsonfe.funshion.com/v3/media/get_serials?cli=aphone&ver=2.1.1.2&sid=1029&mediaid=104541&page=1&pagesize=500&langtype=all_type&plots=0&ta=2"
     #print 'url: \n%s\n'  %(url)
     #content = client_get_url(url)
@@ -225,10 +255,12 @@ def main():
     #print 'url: \n%s\n'  %(url_homepage)
     #homepage_content = client_get_url(url_homepage)
     
+    g_msmaster_db.close()
     
     
 if __name__ == "__main__":
     import sys
     reload(sys)
     sys.setdefaultencoding('utf-8')
+    
     main()
