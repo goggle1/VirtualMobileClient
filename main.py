@@ -8,6 +8,7 @@ import db
 
 g_msmaster_db   = None
 g_video_list    = []
+g_video_dict    = {}
 
 class video_t():
     def __init__(self, hash_id, section_type, section_title, media_id, media_title, serial_id, language):
@@ -198,8 +199,10 @@ def client_show_hash(url, one_block, one_movie, one_serial, one_language):
     else:
         print '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%e\t%s\t%s' % (only_hash, one_block.m_type, one_block.m_title, one_movie.m_media_id, str(serial_id), language_name, one_movie.m_media_name, \
                                                          task1['temperature0'], str(task1['online_time']), str(task1['PayOrFree']))    
-    
+    global g_video_list
+    global g_video_dict
     g_video_list.append(one_video)
+    g_video_dict[only_hash] = one_video
     
 
 def client_show_playlist(data, one_block, one_movie, one_serial = None, one_language = None):
@@ -666,7 +669,10 @@ def main():
     content = client_get_url(url)
     data    = client_decode_content(content)
     client_show_channels(data)    
-        
+    
+    global g_video_list
+    global g_video_dict
+    print 'g_video_list count=%d, g_video_dict count=%d' % (g_video_list.count(), len(g_video_dict))
     
     g_msmaster_db.close()
     
