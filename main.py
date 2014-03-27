@@ -10,6 +10,8 @@ g_msmaster_db   = None
 g_video_list    = []
 g_video_dict    = {}
 
+g_media_dict    = {}
+
 class video_t():
     def __init__(self, hash_id, section_type, section_title, media_id, media_title, serial_id, language):
         self.m_hash_id      = hash_id
@@ -262,10 +264,21 @@ def client_show_season(one_block, one_movie):
     content = client_get_url(url)
     if(len(content) == 0):
         return False
+    
     data    = client_decode_content(content)
-    result = json.loads(data) 
+    
+    result = None
+    try:
+        result = json.loads(data)
+    except:
+        return False
+        
+    if(result == None):
+        return False
+     
     if 'list' not in result:
-        return False    
+        return False
+        
     serial_info_list = result['list']
     for serial_info in serial_info_list:
         one_serial = serial_t(serial_info['serialid'], serial_info['title'])
@@ -297,11 +310,15 @@ def client_show_one_movie(one_block, one_movie):
     
 
 def client_show_one_special(one_block, one_movie):
+    global g_media_dict
+    
     movie_list = [] 
     
     url = "http://jsonfe.funshion.com/v3/phone/get_special?id=%s&type=mspec&cli=aphone&ver=2.1.1.2&page=1&pagesize=9&sid=1029&ta=2" % (one_movie.m_media_id)
     #print 'url: \n%s\n'  %(url)
     content = client_get_url(url)
+    if(len(content) == 0):
+        return False
     #print 'content: \n%s\n'  %(content)
     data    = client_decode_content(content) 
     #print 'data: \n%s\n'  %(data)
@@ -310,7 +327,9 @@ def client_show_one_special(one_block, one_movie):
     for media_info in media_list: 
         o_movie = movie_t(media_info['media_id'], media_info['name_cn'])
         movie_list.append(o_movie)
-        client_show_one_movie(one_block, o_movie)
+        if(g_media_dict.has_key(o_movie.m_media_id) == False):
+            g_media_dict[o_movie.m_media_id] = o_movie
+            client_show_one_movie(one_block, o_movie)
     one_movie.m_list_special = movie_list
     
     return True
@@ -337,285 +356,342 @@ def client_show_index(content):
 
 
 def client_show_channel_movie(one_channel):
+    global g_media_dict
+    
     section_type = 'recommended'
     movie_list = [] 
     url = "http://jsonfe.funshion.com/v3/operation/get_recommended?cli=aphone&ver=2.1.1.2&type=%s&page=1&sid=1029&deviceid=25B17C690FBC0DBC0BB80EBC684C84EE88FB79BD1DFA8C02A5A89EA129FDC656&ta=2" % (one_channel.m_type)
     #print 'url: \n%s\n'  %(url)
     content = client_get_url(url)
-    data    = client_decode_content(content)
-    result = json.loads(data) 
-    movie_info_list = result['list']
-    for movie_info in movie_info_list: 
-        one_movie = movie_t(movie_info['mediaid'], movie_info['media_name']) 
-        movie_list.append(one_movie)   
-    one_channel.m_list_recommended = movie_list    
-    for one_movie in movie_list:
-        #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
-        client_show_one_movie(one_channel, one_movie)
+    if(len(content) > 0):
+        data    = client_decode_content(content)
+        result = json.loads(data) 
+        movie_info_list = result['list']
+        for movie_info in movie_info_list: 
+            one_movie = movie_t(movie_info['mediaid'], movie_info['media_name']) 
+            movie_list.append(one_movie)   
+        one_channel.m_list_recommended = movie_list    
+        for one_movie in movie_list:
+            #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
+            if(g_media_dict.has_key(one_movie.m_media_id) == False):
+                g_media_dict[one_movie.m_media_id] = one_movie          
+                client_show_one_movie(one_channel, one_movie)
     
     section_type = 'list_hottest'
     movie_list = [] 
     url = "http://jsonfe.funshion.com/v3/media/get_list?cli=aphone&ver=2.1.1.2&sid=1029&type=%s&order=%s&page=1&pagesize=16&rdate=all&region=all&cate=all&ta=2" % (one_channel.m_type, 'pl')
     #print 'url: \n%s\n'  %(url)
     content = client_get_url(url)
-    data    = client_decode_content(content)
-    result = json.loads(data) 
-    movie_info_list = result['list']
-    for movie_info in movie_info_list: 
-        one_movie = movie_t(movie_info['media_id'], movie_info['name_cn']) 
-        movie_list.append(one_movie)   
-    one_channel.m_list_ordinary = movie_list    
-    for one_movie in movie_list:
-        #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
-        client_show_one_movie(one_channel, one_movie)
+    if(len(content) > 0):
+        data    = client_decode_content(content)
+        result = json.loads(data) 
+        movie_info_list = result['list']
+        for movie_info in movie_info_list: 
+            one_movie = movie_t(movie_info['media_id'], movie_info['name_cn']) 
+            movie_list.append(one_movie)   
+        one_channel.m_list_ordinary = movie_list    
+        for one_movie in movie_list:
+            #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
+            if(g_media_dict.has_key(one_movie.m_media_id) == False):
+                g_media_dict[one_movie.m_media_id] = one_movie          
+                client_show_one_movie(one_channel, one_movie)
     
     section_type = 'list_newest'
     movie_list = [] 
     url = "http://jsonfe.funshion.com/v3/media/get_list?cli=aphone&ver=2.1.1.2&sid=1029&type=%s&order=%s&page=1&pagesize=16&rdate=all&region=all&cate=all&ta=2" % (one_channel.m_type, 'mo')
     #print 'url: \n%s\n'  %(url)
     content = client_get_url(url)
-    data    = client_decode_content(content)
-    result = json.loads(data) 
-    movie_info_list = result['list']
-    for movie_info in movie_info_list: 
-        one_movie = movie_t(movie_info['media_id'], movie_info['name_cn']) 
-        movie_list.append(one_movie)   
-    one_channel.m_list_ordinary = movie_list    
-    for one_movie in movie_list:
-        #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
-        client_show_one_movie(one_channel, one_movie)
+    if(len(content) > 0):
+        data    = client_decode_content(content)
+        result = json.loads(data) 
+        movie_info_list = result['list']
+        for movie_info in movie_info_list: 
+            one_movie = movie_t(movie_info['media_id'], movie_info['name_cn']) 
+            movie_list.append(one_movie)   
+        one_channel.m_list_ordinary = movie_list    
+        for one_movie in movie_list:
+            #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
+            if(g_media_dict.has_key(one_movie.m_media_id) == False):
+                g_media_dict[one_movie.m_media_id] = one_movie          
+                client_show_one_movie(one_channel, one_movie)
     
     section_type = 'list_rate'
     movie_list = [] 
     url = "http://jsonfe.funshion.com/v3/media/get_list?cli=aphone&ver=2.1.1.2&sid=1029&type=%s&order=%s&page=1&pagesize=16&rdate=all&region=all&cate=all&ta=2" % (one_channel.m_type, 'sc')
     #print 'url: \n%s\n'  %(url)
     content = client_get_url(url)
-    data    = client_decode_content(content)
-    result = json.loads(data) 
-    movie_info_list = result['list']
-    for movie_info in movie_info_list: 
-        one_movie = movie_t(movie_info['media_id'], movie_info['name_cn']) 
-        movie_list.append(one_movie)   
-    one_channel.m_list_ordinary = movie_list    
-    for one_movie in movie_list:
-        #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
-        client_show_one_movie(one_channel, one_movie)
+    if(len(content) > 0):
+        data    = client_decode_content(content)
+        result = json.loads(data) 
+        movie_info_list = result['list']
+        for movie_info in movie_info_list: 
+            one_movie = movie_t(movie_info['media_id'], movie_info['name_cn']) 
+            movie_list.append(one_movie)   
+        one_channel.m_list_ordinary = movie_list    
+        for one_movie in movie_list:
+            #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
+            if(g_media_dict.has_key(one_movie.m_media_id) == False):
+                g_media_dict[one_movie.m_media_id] = one_movie          
+                client_show_one_movie(one_channel, one_movie)
             
     section_type = 'special'
     movie_list = [] 
     url = "http://jsonfe.funshion.com/v3/operation/get_special_list?type=%s&cli=aphone&ver=2.1.1.2&page=1&pagesize=10&sid=1029&ta=2" % (one_channel.m_type)
     #print 'url: \n%s\n'  %(url)
     content = client_get_url(url)
-    data    = client_decode_content(content)
-    result = json.loads(data)
-    movie_info_list = result['list']
-    for movie_info in movie_info_list: 
-        one_movie = movie_t(movie_info['special_id'], movie_info['name']) 
-        movie_list.append(one_movie)   
-    one_channel.m_list_special = movie_list    
-    for one_movie in movie_list:
-        #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
-        client_show_one_special(one_channel, one_movie)
+    if(len(content) > 0):
+        data    = client_decode_content(content)
+        result = json.loads(data)
+        movie_info_list = result['list']
+        for movie_info in movie_info_list: 
+            one_movie = movie_t(movie_info['special_id'], movie_info['name']) 
+            movie_list.append(one_movie)   
+        one_channel.m_list_special = movie_list    
+        for one_movie in movie_list:
+            #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
+            if(g_media_dict.has_key(one_movie.m_media_id) == False):
+                g_media_dict[one_movie.m_media_id] = one_movie          
+                client_show_one_special(one_channel, one_movie)
         
     section_type = 'rank_day'
     movie_list = [] 
     url = "http://jsonfe.funshion.com/rank?cli=aphone&sid=1029&ver=2.1.1.2&mtype=%s&rank=%s&ta=2" % (one_channel.m_type, 'day')
     #print 'url: \n%s\n'  %(url)
-    content = client_get_url(url)    
-    result = json.loads(content)
-    movie_info_list = result['data']
-    for movie_info in movie_info_list: 
-        one_movie = movie_t(movie_info['mediaid'], movie_info['name']) 
-        movie_list.append(one_movie)   
-    one_channel.m_list_rank = movie_list    
-    for one_movie in movie_list:
-        #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
-        client_show_one_movie(one_channel, one_movie)
+    content = client_get_url(url)  
+    if(len(content) > 0):  
+        result = json.loads(content)
+        movie_info_list = result['data']
+        for movie_info in movie_info_list: 
+            one_movie = movie_t(movie_info['mediaid'], movie_info['name']) 
+            movie_list.append(one_movie)   
+        one_channel.m_list_rank = movie_list    
+        for one_movie in movie_list:
+            #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
+            if(g_media_dict.has_key(one_movie.m_media_id) == False):
+                g_media_dict[one_movie.m_media_id] = one_movie          
+                client_show_one_movie(one_channel, one_movie)
         
     section_type = 'rank_week'
     movie_list = [] 
     url = "http://jsonfe.funshion.com/rank?cli=aphone&sid=1029&ver=2.1.1.2&mtype=%s&rank=%s&ta=2" % (one_channel.m_type, 'week')
     #print 'url: \n%s\n'  %(url)
-    content = client_get_url(url)    
-    result = json.loads(content)
-    movie_info_list = result['data']
-    for movie_info in movie_info_list: 
-        one_movie = movie_t(movie_info['mediaid'], movie_info['name']) 
-        movie_list.append(one_movie)   
-    one_channel.m_list_rank = movie_list    
-    for one_movie in movie_list:
-        #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
-        client_show_one_movie(one_channel, one_movie)
+    content = client_get_url(url)   
+    if(len(content) > 0): 
+        result = json.loads(content)
+        movie_info_list = result['data']
+        for movie_info in movie_info_list: 
+            one_movie = movie_t(movie_info['mediaid'], movie_info['name']) 
+            movie_list.append(one_movie)   
+        one_channel.m_list_rank = movie_list    
+        for one_movie in movie_list:
+            #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
+            if(g_media_dict.has_key(one_movie.m_media_id) == False):
+                g_media_dict[one_movie.m_media_id] = one_movie          
+                client_show_one_movie(one_channel, one_movie)
         
     section_type = 'rank_all'
     movie_list = [] 
     url = "http://jsonfe.funshion.com/rank?cli=aphone&sid=1029&ver=2.1.1.2&mtype=%s&rank=%s&ta=2" % (one_channel.m_type, 'all')
     #print 'url: \n%s\n'  %(url)
-    content = client_get_url(url)    
-    result = json.loads(content)
-    movie_info_list = result['data']
-    for movie_info in movie_info_list: 
-        one_movie = movie_t(movie_info['mediaid'], movie_info['name']) 
-        movie_list.append(one_movie)   
-    one_channel.m_list_rank = movie_list    
-    for one_movie in movie_list:
-        #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
-        client_show_one_movie(one_channel, one_movie)
+    content = client_get_url(url)  
+    if(len(content) > 0):   
+        result = json.loads(content)
+        movie_info_list = result['data']
+        for movie_info in movie_info_list: 
+            one_movie = movie_t(movie_info['mediaid'], movie_info['name']) 
+            movie_list.append(one_movie)   
+        one_channel.m_list_rank = movie_list    
+        for one_movie in movie_list:
+            #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
+            if(g_media_dict.has_key(one_movie.m_media_id) == False):
+                g_media_dict[one_movie.m_media_id] = one_movie          
+                client_show_one_movie(one_channel, one_movie)
         
     return True
     
 
 def client_show_channel_variety(one_channel):
+    global g_media_dict
+    
     section_type = 'newest'
     movie_list = []
     url = "http://jsonfe.funshion.com/v3/media/get_list?cli=aphone&ver=2.1.1.2&sid=1029&type=%s&order=%s&page=1&pagesize=16&rdate=all&region=all&cate=all&ta=2" % (one_channel.m_type, 'pl')
     #print 'url:\n %s\n'  %(url)
     content = client_get_url(url)
-    #print 'content:\n %s\n'  %(content)
-    data    = client_decode_content(content)
-    #print 'data:\n %s\n'  %(data)
-    result = json.loads(data) 
-    movie_info_list = result['list']
-    for movie_info in movie_info_list: 
-        one_movie = movie_t(movie_info['media_id'], movie_info['name_cn']) 
-        movie_list.append(one_movie)   
-    one_channel.m_list_recommended = movie_list    
-    for one_movie in movie_list:
-        #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
-        client_show_one_movie(one_channel, one_movie)
+    if(len(content) > 0): 
+        #print 'content:\n %s\n'  %(content)
+        data    = client_decode_content(content)
+        #print 'data:\n %s\n'  %(data)
+        result = json.loads(data) 
+        movie_info_list = result['list']
+        for movie_info in movie_info_list: 
+            one_movie = movie_t(movie_info['media_id'], movie_info['name_cn']) 
+            movie_list.append(one_movie)   
+        one_channel.m_list_recommended = movie_list    
+        for one_movie in movie_list:
+            #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
+            if(g_media_dict.has_key(one_movie.m_media_id) == False):
+                g_media_dict[one_movie.m_media_id] = one_movie          
+                client_show_one_movie(one_channel, one_movie)
         
     section_type = 'hottest'
     movie_list = [] 
     url = "http://jsonfe.funshion.com/v3/media/get_list?cli=aphone&ver=2.1.1.2&sid=1029&type=%s&order=%s&page=1&pagesize=16&rdate=all&region=all&cate=all&ta=2" % (one_channel.m_type, 'mo')
     #print 'url:\n %s\n'  %(url)
     content = client_get_url(url)
-    #print 'content:\n %s\n'  %(content)
-    data    = client_decode_content(content)
-    #print 'data:\n %s\n'  %(data)
-    result = json.loads(data) 
-    movie_info_list = result['list']
-    for movie_info in movie_info_list: 
-        one_movie = movie_t(movie_info['media_id'], movie_info['name_cn']) 
-        movie_list.append(one_movie)   
-    one_channel.m_list_recommended = movie_list    
-    for one_movie in movie_list:
-        #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
-        client_show_one_movie(one_channel, one_movie)
+    if(len(content) > 0): 
+        #print 'content:\n %s\n'  %(content)
+        data    = client_decode_content(content)
+        #print 'data:\n %s\n'  %(data)
+        result = json.loads(data) 
+        movie_info_list = result['list']
+        for movie_info in movie_info_list: 
+            one_movie = movie_t(movie_info['media_id'], movie_info['name_cn']) 
+            movie_list.append(one_movie)   
+        one_channel.m_list_recommended = movie_list    
+        for one_movie in movie_list:
+            #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
+            if(g_media_dict.has_key(one_movie.m_media_id) == False):
+                g_media_dict[one_movie.m_media_id] = one_movie          
+                client_show_one_movie(one_channel, one_movie)
     
     section_type = 'rank'
     movie_list = [] 
     url = "http://jsonfe.funshion.com/v3/media/get_list?cli=aphone&ver=2.1.1.2&sid=1029&type=%s&order=%s&page=1&pagesize=16&rdate=all&region=all&cate=all&ta=2" % (one_channel.m_type, 'sc')
     print 'url:\n %s\n'  %(url)
     content = client_get_url(url)
-    #print 'content:\n %s\n'  %(content)
-    data    = client_decode_content(content)
-    #print 'data:\n %s\n'  %(data)
-    result = json.loads(data) 
-    movie_info_list = result['list']
-    for movie_info in movie_info_list: 
-        one_movie = movie_t(movie_info['media_id'], movie_info['name_cn']) 
-        movie_list.append(one_movie)   
-    one_channel.m_list_recommended = movie_list    
-    for one_movie in movie_list:
-        #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
-        client_show_one_movie(one_channel, one_movie)
+    if(len(content) > 0): 
+        #print 'content:\n %s\n'  %(content)
+        data    = client_decode_content(content)
+        #print 'data:\n %s\n'  %(data)
+        result = json.loads(data) 
+        movie_info_list = result['list']
+        for movie_info in movie_info_list: 
+            one_movie = movie_t(movie_info['media_id'], movie_info['name_cn']) 
+            movie_list.append(one_movie)   
+        one_channel.m_list_recommended = movie_list    
+        for one_movie in movie_list:
+            #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
+            if(g_media_dict.has_key(one_movie.m_media_id) == False):
+                g_media_dict[one_movie.m_media_id] = one_movie          
+                client_show_one_movie(one_channel, one_movie)
             
     return True
 
 
 def client_show_channel_news(one_channel):
+    global g_media_dict
+    
     section_type = 'recommended'
     movie_list = [] 
     url = "http://jsonfe.funshion.com/v3/get_videos?cli=aphone&ver=2.1.1.2&videotype=%s&sid=1029&page=1&pagesize=10&order=%s&cate=%%E5%%85%%A8%%E9%%83%%A8&ta=2" % (one_channel.m_type, 'hot')
     #print 'url:\n %s\n'  %(url)
     content = client_get_url(url)
-    #print 'content:\n %s\n'  %(content)
-    data    = client_decode_content(content)
-    #print 'data:\n %s\n'  %(data)
-    result = json.loads(data) 
-    movie_info_list = result['list']
-    for movie_info in movie_info_list: 
-        one_movie = movie_t(movie_info['video_id'], movie_info['video_name']) 
-        movie_list.append(one_movie)   
-    one_channel.m_list_recommended = movie_list    
-    for one_movie in movie_list:
-        #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
-        client_show_one_movie(one_channel, one_movie)
+    if(len(content) > 0): 
+        #print 'content:\n %s\n'  %(content)
+        data    = client_decode_content(content)
+        #print 'data:\n %s\n'  %(data)
+        result = json.loads(data) 
+        movie_info_list = result['list']
+        for movie_info in movie_info_list: 
+            one_movie = movie_t(movie_info['video_id'], movie_info['video_name']) 
+            movie_list.append(one_movie)   
+        one_channel.m_list_recommended = movie_list    
+        for one_movie in movie_list:
+            #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
+            if(g_media_dict.has_key(one_movie.m_media_id) == False):
+                g_media_dict[one_movie.m_media_id] = one_movie          
+                client_show_one_movie(one_channel, one_movie)
     
     section_type = 'newest'
     movie_list = [] 
     url = "http://jsonfe.funshion.com/v3/get_videos?cli=aphone&ver=2.1.1.2&videotype=%s&sid=1029&page=1&pagesize=10&order=%s&cate=%%E5%%85%%A8%%E9%%83%%A8&ta=2" % (one_channel.m_type, 'mo')
     #print 'url:\n %s\n'  %(url)
     content = client_get_url(url)
-    #print 'content:\n %s\n'  %(content)
-    data    = client_decode_content(content)
-    #print 'data:\n %s\n'  %(data)
-    result = json.loads(data) 
-    movie_info_list = result['list']
-    for movie_info in movie_info_list: 
-        one_movie = movie_t(movie_info['video_id'], movie_info['video_name']) 
-        movie_list.append(one_movie)   
-    one_channel.m_list_recommended = movie_list    
-    for one_movie in movie_list:
-        #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
-        client_show_one_movie(one_channel, one_movie)
+    if(len(content) > 0): 
+        #print 'content:\n %s\n'  %(content)
+        data    = client_decode_content(content)
+        #print 'data:\n %s\n'  %(data)
+        result = json.loads(data) 
+        movie_info_list = result['list']
+        for movie_info in movie_info_list: 
+            one_movie = movie_t(movie_info['video_id'], movie_info['video_name']) 
+            movie_list.append(one_movie)   
+        one_channel.m_list_recommended = movie_list    
+        for one_movie in movie_list:
+            #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
+            if(g_media_dict.has_key(one_movie.m_media_id) == False):
+                g_media_dict[one_movie.m_media_id] = one_movie          
+                client_show_one_movie(one_channel, one_movie)
             
     section_type = 'hottest'
     movie_list = [] 
     url = "http://jsonfe.funshion.com/v3/get_videos?cli=aphone&ver=2.1.1.2&videotype=%s&sid=1029&page=1&pagesize=10&order=%s&cate=%%E5%%85%%A8%%E9%%83%%A8&ta=2" % (one_channel.m_type, 'pl')
     #print 'url:\n %s\n'  %(url)
     content = client_get_url(url)
-    #print 'content:\n %s\n'  %(content)
-    data    = client_decode_content(content)
-    #print 'data:\n %s\n'  %(data)
-    result = json.loads(data) 
-    movie_info_list = result['list']
-    for movie_info in movie_info_list: 
-        one_movie = movie_t(movie_info['video_id'], movie_info['video_name']) 
-        movie_list.append(one_movie)   
-    one_channel.m_list_recommended = movie_list    
-    for one_movie in movie_list:
-        #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
-        client_show_one_movie(one_channel, one_movie)
+    if(len(content) > 0): 
+        #print 'content:\n %s\n'  %(content)
+        data    = client_decode_content(content)
+        #print 'data:\n %s\n'  %(data)
+        result = json.loads(data) 
+        movie_info_list = result['list']
+        for movie_info in movie_info_list: 
+            one_movie = movie_t(movie_info['video_id'], movie_info['video_name']) 
+            movie_list.append(one_movie)   
+        one_channel.m_list_recommended = movie_list    
+        for one_movie in movie_list:
+            #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
+            if(g_media_dict.has_key(one_movie.m_media_id) == False):
+                g_media_dict[one_movie.m_media_id] = one_movie          
+                client_show_one_movie(one_channel, one_movie)
+    
     return True
 
 
 def client_show_channel_entertainment(one_channel, catelogy):
+    global g_media_dict
+    
     section_type = 'newest'
     movie_list = [] 
     url = "http://jsonfe.funshion.com/v3/get_videos?cli=aphone&ver=2.1.1.2&videotype=%s&sid=1029&page=1&pagesize=10&order=%s&date=total&cate=%s&ta=2" % (one_channel.m_type, 'mo', catelogy)
     #print 'url:\n %s\n'  %(url)
     content = client_get_url(url)
-    #print 'content:\n %s\n'  %(content)
-    data    = client_decode_content(content)
-    #print 'data:\n %s\n'  %(data)
-    result = json.loads(data) 
-    movie_info_list = result['list']
-    for movie_info in movie_info_list: 
-        one_movie = movie_t(movie_info['video_id'], movie_info['video_name']) 
-        movie_list.append(one_movie)   
-    one_channel.m_list_recommended = movie_list    
-    for one_movie in movie_list:
-        #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
-        client_show_one_movie(one_channel, one_movie)
+    if(len(content) > 0): 
+        #print 'content:\n %s\n'  %(content)
+        data    = client_decode_content(content)
+        #print 'data:\n %s\n'  %(data)
+        result = json.loads(data) 
+        movie_info_list = result['list']
+        for movie_info in movie_info_list: 
+            one_movie = movie_t(movie_info['video_id'], movie_info['video_name']) 
+            movie_list.append(one_movie)   
+        one_channel.m_list_recommended = movie_list    
+        for one_movie in movie_list:
+            #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
+            if(g_media_dict.has_key(one_movie.m_media_id) == False):
+                g_media_dict[one_movie.m_media_id] = one_movie          
+                client_show_one_movie(one_channel, one_movie)
         
     section_type = 'hottest'
     movie_list = [] 
     url = "http://jsonfe.funshion.com/v3/get_videos?cli=aphone&ver=2.1.1.2&videotype=%s&sid=1029&page=1&pagesize=10&order=%s&date=total&cate=%s&ta=2" % (one_channel.m_type, 'pl', catelogy)
     #print 'url:\n %s\n'  %(url)
     content = client_get_url(url)
-    #print 'content:\n %s\n'  %(content)
-    data    = client_decode_content(content)
-    #print 'data:\n %s\n'  %(data)
-    result = json.loads(data) 
-    movie_info_list = result['list']
-    for movie_info in movie_info_list: 
-        one_movie = movie_t(movie_info['video_id'], movie_info['video_name']) 
-        movie_list.append(one_movie)   
-    one_channel.m_list_recommended = movie_list    
-    for one_movie in movie_list:
-        #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
-        client_show_one_movie(one_channel, one_movie)
+    if(len(content) > 0): 
+        #print 'content:\n %s\n'  %(content)
+        data    = client_decode_content(content)
+        #print 'data:\n %s\n'  %(data)
+        result = json.loads(data) 
+        movie_info_list = result['list']
+        for movie_info in movie_info_list: 
+            one_movie = movie_t(movie_info['video_id'], movie_info['video_name']) 
+            movie_list.append(one_movie)   
+        one_channel.m_list_recommended = movie_list    
+        for one_movie in movie_list:
+            #print '%s:\t%s:\t%s\t%s' % (one_channel.m_type, section_type, one_movie.m_media_id, one_movie.m_media_name)
+            if(g_media_dict.has_key(one_movie.m_media_id) == False):
+                g_media_dict[one_movie.m_media_id] = one_movie          
+                client_show_one_movie(one_channel, one_movie)
     
     return True
 
