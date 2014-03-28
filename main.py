@@ -112,7 +112,15 @@ def client_get_url(url):
     
                 
 def client_decode_content(content):
-    result = json.loads(content)
+    result = None
+    try:
+        result = json.loads(content)
+    except:
+        return ''
+    
+    if(result == None):
+        return ''
+    
     if 'encrypt' not in result:
         return ''
         
@@ -746,9 +754,10 @@ def main():
     data    = client_decode_content(content)
     client_show_channels(data)    
     
+    global g_media_dict
     global g_video_list
     global g_video_dict
-    print 'g_video_list count=%d, g_video_dict count=%d' % (g_video_list.count(), len(g_video_dict))
+    print 'g_media_dict count=%d, g_video_list count=%d, g_video_dict count=%d' % (len(g_media_dict), len(g_video_list), len(g_video_dict))
     
     g_msmaster_db.close()
     
